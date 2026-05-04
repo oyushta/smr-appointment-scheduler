@@ -25,6 +25,24 @@ public sealed class SmrDbContext(DbContextOptions<SmrDbContext> options) : DbCon
             .HasIndex(slot => new { slot.BranchId, slot.StartsAt, slot.BayNumber })
             .IsUnique();
 
+        modelBuilder.Entity<AppointmentSlot>()
+            .HasOne(slot => slot.Branch)
+            .WithMany(branch => branch.Slots)
+            .HasForeignKey(slot => slot.BranchId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<AppointmentSlot>()
+            .HasOne(slot => slot.Mechanic)
+            .WithMany(mechanic => mechanic.Slots)
+            .HasForeignKey(slot => slot.MechanicId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<AppointmentSlot>()
+            .HasOne(slot => slot.ServiceType)
+            .WithMany(serviceType => serviceType.Slots)
+            .HasForeignKey(slot => slot.ServiceTypeId)
+            .OnDelete(DeleteBehavior.NoAction);
+
         modelBuilder.Entity<WorkNote>()
             .Property(note => note.CreatedAt)
             .HasDefaultValueSql("SYSUTCDATETIME()");
