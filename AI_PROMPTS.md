@@ -14,4 +14,4 @@ User provided `AI_Coding_Interview_Assignment.pdf` and asked: "I want you to pre
 
 ## Course corrections
 
-Local `dotnet`, `docker`, and `git` commands were not available on PATH in this environment, so the project was prepared as source files rather than scaffolded and built from the SDK.
+Local `dotnet`, `docker`, and `git` commands were not available on PATH at first, so the project was initially prepared as source files rather than scaffolded from the SDK. After installing .NET 8, `dotnet restore` and `dotnet build --no-restore` were run successfully. App startup still requires SQL Server on `localhost,1433`.

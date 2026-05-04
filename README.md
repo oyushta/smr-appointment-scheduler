@@ -4,7 +4,7 @@ Small internal scheduling app for Service, Maintenance & Repair teams. It suppor
 
 ## How to run
 
-Start SQL Server with `docker compose up -d`, then run the app with `dotnet run`. The app creates and seeds its schema on first startup.
+Start SQL Server with `docker compose up -d`, then run the app with `dotnet run`. The app creates and seeds its schema on first startup. You will need Docker Desktop or another SQL Server instance listening on `localhost,1433`.
 
 ## Stack choice
 
@@ -21,6 +21,10 @@ Authentication, notifications, rescheduling, cancellation, recurring appointment
 ## Known rough edges
 
 The app uses `EnsureCreatedAsync` plus seed data as the startup schema path so it is easy to run in a clean interview environment. In production I would replace that with checked-in EF migrations.
+
+## Verification
+
+`dotnet restore` and `dotnet build --no-restore` pass locally with .NET SDK 8.0.420. Running the app also requires SQL Server to be available on `localhost,1433`.
 
 ## AI tools used
 
