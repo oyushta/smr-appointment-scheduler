@@ -1,0 +1,127 @@
+@page "/mechanic/appointments/{BookingId:int}"
+@inject SchedulingService Scheduling
+@inject NavigationManager Navigation
+
+<PageTitle>Appointment - SMR Scheduler</PageTitle>
+
+@if (booking is null)
+{
+    <p class="muted">Loading appointment...</p>
+}
+else
+{
+    <header class="page-header">
+        <div>
+            <a class="back-link" href="/mechanic">Back to mechanic view</a>
+            <h1>@booking.CustomerName</h1>
+            <p>@booking.ReferenceNumber - @booking.AppointmentSlot!.StartsAt.ToString("f")</p>
+        </div>
+        <span class="status large">@DisplayStatus(booking.Status)</span>
+    </header>
+
+    <section class="details-grid">
+        <article class="panel">
+            <h2>Appointment</h2>
+            <dl>
+                <dt>Vehicle</dt>
+                <dd>@booking.VehicleRegistration</dd>
+                <dt>Phone</dt>
+                <dd>@booking.CustomerPhone</dd>
+                <dt>Service</dt>
+                <dd>@booking.AppointmentSlot.ServiceType!.Name</dd>
+                <dt>Branch</dt>
+                <dd>@booking.AppointmentSlot.Branch!.Name</dd>
+                <dt>Mechanic</dt>
+                <dd>@booking.AppointmentSlot.Mechanic!.Name</dd>
+                <dt>Customer notes</dt>
+                <dd>@(string.IsNullOrWhiteSpace(booking.CustomerNotes) ? "No notes provided." : booking.CustomerNotes)</dd>
+            </dl>
+        </article>
+
+        <article class="panel">
+            <h2>Status</h2>
+            <div class="status-actions">
+                @foreach (var status in Enum.GetValues<AppointmentStatus>())
+                {
+                    <button class="button @(booking.Status == status ? "primary" : "secondary")" @onclick="() => SetStatus(status)">
+                        @DisplayStatus(status)
+                    </button>
+                }
+            </div>
+        </article>
+    </section>
+
+    <section class="panel notes-panel">
+        <h2>Work notes</h2>
+        <EditForm Model="noteForm" OnValidSubmit="AddNote" class="note-form">
+            <DataAnnotationsValidator />
+            <InputTextArea @bind-Value="noteForm.Note" placeholder="Add diagnostic findings, parts used, or next steps" />
+            <ValidationSummary />
+            <button class="button primary" type="submit">Add note</button>
+        </EditForm>
+
+        @if (booking.WorkNotes.Count == 0)
+        {
+            <p class="muted">No work notes yet.</p>
+        }
+        else
+        {
+            <div class="notes-list">
+                @foreach (var note in booking.WorkNotes)
+                {
+                    <article>
+                        <time>@note.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</time>
+                        <p>@note.Note</p>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public int BookingId { get; set; }
+
+    private Booking? booking;
+    private NoteForm noteForm = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadBooking();
+    }
+
+    private async Task LoadBooking()
+    {
+        booking = await Scheduling.GetBookingAsync(BookingId);
+        if (booking is null)
+        {
+            Navigation.NavigateTo("/mechanic");
+        }
+    }
+
+    private async Task SetStatus(AppointmentStatus status)
+    {
+        await Scheduling.UpdateStatusAsync(BookingId, status);
+        await LoadBooking();
+    }
+
+    private async Task AddNote()
+    {
+        await Scheduling.AddWorkNoteAsync(BookingId, noteForm.Note);
+        noteForm = new();
+        await LoadBooking();
+    }
+
+    private static string DisplayStatus(AppointmentStatus status) =>
+        status switch
+        {
+            AppointmentStatus.InProgress => "In progress",
+            AppointmentStatus.NoShow => "No-show",
+            _ => status.ToString()
+        };
+
+    private sealed class NoteForm
+    {
+        [Required, StringLength(1000)] public string Note { get; set; } = "";
+    }
+}

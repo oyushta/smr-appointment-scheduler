@@ -1,0 +1,80 @@
+@page "/mechanic"
+@inject SchedulingService Scheduling
+
+<PageTitle>Mechanic View - SMR Scheduler</PageTitle>
+
+<header class="page-header">
+    <div>
+        <h1>Mechanic view</h1>
+        <p>Appointments for today and tomorrow.</p>
+    </div>
+    <label class="actor-select">
+        Act as
+        <select @bind="selectedMechanicId" @bind:after="LoadAppointments">
+            @foreach (var mechanic in mechanics)
+            {
+                <option value="@mechanic.Id">@mechanic.Name - @mechanic.Branch!.Name</option>
+            }
+        </select>
+    </label>
+</header>
+
+@if (appointments is null)
+{
+    <p class="muted">Loading appointments...</p>
+}
+else if (appointments.Count == 0)
+{
+    <section class="empty">No appointments assigned for today or tomorrow.</section>
+}
+else
+{
+    <section class="schedule-list">
+        @foreach (var booking in appointments)
+        {
+            <a class="row-card interactive" href="/mechanic/appointments/@booking.Id">
+                <div class="time-block">
+                    <strong>@booking.AppointmentSlot!.StartsAt.ToString("ddd")</strong>
+                    <span>@booking.AppointmentSlot.StartsAt.ToString("HH:mm")</span>
+                </div>
+                <div>
+                    <h2>@booking.CustomerName</h2>
+                    <p>@booking.VehicleRegistration - @booking.AppointmentSlot.ServiceType!.Name</p>
+                </div>
+                <span class="status">@DisplayStatus(booking.Status)</span>
+            </a>
+        }
+    </section>
+}
+
+@code {
+    private List<Mechanic> mechanics = [];
+    private List<Booking>? appointments;
+    private int selectedMechanicId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        mechanics = await Scheduling.GetMechanicsAsync();
+        selectedMechanicId = mechanics.FirstOrDefault()?.Id ?? 0;
+        await LoadAppointments();
+    }
+
+    private async Task LoadAppointments()
+    {
+        if (selectedMechanicId == 0)
+        {
+            appointments = [];
+            return;
+        }
+
+        appointments = await Scheduling.GetMechanicAppointmentsAsync(selectedMechanicId);
+    }
+
+    private static string DisplayStatus(AppointmentStatus status) =>
+        status switch
+        {
+            AppointmentStatus.InProgress => "In progress",
+            AppointmentStatus.NoShow => "No-show",
+            _ => status.ToString()
+        };
+}

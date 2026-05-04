@@ -1,0 +1,60 @@
+@page "/"
+@inject SchedulingService Scheduling
+
+<PageTitle>Today - SMR Scheduler</PageTitle>
+
+<header class="page-header">
+    <div>
+        <h1>Today's schedule</h1>
+        <p>Shared view across all mechanics and branches.</p>
+    </div>
+    <a class="button primary" href="/book">Book appointment</a>
+</header>
+
+@if (appointments is null)
+{
+    <p class="muted">Loading schedule...</p>
+}
+else if (appointments.Count == 0)
+{
+    <section class="empty">No appointments booked for today.</section>
+}
+else
+{
+    <section class="schedule-list">
+        @foreach (var booking in appointments)
+        {
+            <article class="row-card">
+                <div class="time-block">
+                    <strong>@booking.AppointmentSlot!.StartsAt.ToString("HH:mm")</strong>
+                    <span>@booking.AppointmentSlot.EndsAt.ToString("HH:mm")</span>
+                </div>
+                <div>
+                    <h2>@booking.CustomerName</h2>
+                    <p>@booking.VehicleRegistration - @booking.AppointmentSlot.ServiceType!.Name - @booking.AppointmentSlot.Branch!.Name</p>
+                </div>
+                <div>
+                    <span class="status">@DisplayStatus(booking.Status)</span>
+                    <p class="muted">@booking.AppointmentSlot.Mechanic!.Name</p>
+                </div>
+            </article>
+        }
+    </section>
+}
+
+@code {
+    private List<Booking>? appointments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        appointments = await Scheduling.GetTodaysScheduleAsync();
+    }
+
+    private static string DisplayStatus(AppointmentStatus status) =>
+        status switch
+        {
+            AppointmentStatus.InProgress => "In progress",
+            AppointmentStatus.NoShow => "No-show",
+            _ => status.ToString()
+        };
+}

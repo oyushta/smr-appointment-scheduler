@@ -1,0 +1,21 @@
+@inherits LayoutComponentBase
+
+<div class="shell">
+    <aside class="sidebar">
+        <a class="brand" href="/">
+            <span class="brand-mark">AA</span>
+            <span>
+                <strong>SMR Scheduler</strong>
+                <small>Internal appointments</small>
+            </span>
+        </a>
+        <nav>
+            <NavLink href="/" Match="NavLinkMatch.All">Today</NavLink>
+            <NavLink href="/book">Book appointment</NavLink>
+            <NavLink href="/mechanic">Mechanic view</NavLink>
+        </nav>
+    </aside>
+    <main>
+        @Body
+    </main>
+</div>

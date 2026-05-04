@@ -1,0 +1,168 @@
+@page "/book"
+@inject SchedulingService Scheduling
+
+<PageTitle>Book Appointment - SMR Scheduler</PageTitle>
+
+<header class="page-header">
+    <div>
+        <h1>Book appointment</h1>
+        <p>Available slots for the next 7 days.</p>
+    </div>
+</header>
+
+<section class="toolbar">
+    <label>
+        Service
+        <select @bind="selectedServiceTypeId" @bind:after="LoadSlots">
+            <option value="">All service types</option>
+            @foreach (var service in serviceTypes)
+            {
+                <option value="@service.Id">@service.Name</option>
+            }
+        </select>
+    </label>
+    <label>
+        Branch
+        <select @bind="selectedBranchId" @bind:after="LoadSlots">
+            <option value="">All branches</option>
+            @foreach (var branch in branches)
+            {
+                <option value="@branch.Id">@branch.Name</option>
+            }
+        </select>
+    </label>
+</section>
+
+@if (result is not null)
+{
+    <div class="alert @(result.Success ? "success" : "error")">
+        @result.Message
+        @if (result.ReferenceNumber is not null)
+        {
+            <strong>Reference @result.ReferenceNumber</strong>
+        }
+    </div>
+}
+
+<section class="booking-grid">
+    <div class="slot-list">
+        @if (slots is null)
+        {
+            <p class="muted">Loading slots...</p>
+        }
+        else if (slots.Count == 0)
+        {
+            <section class="empty">No available slots match those filters.</section>
+        }
+        else
+        {
+            @foreach (var slot in slots)
+            {
+                <button class="slot @(selectedSlot?.Id == slot.Id ? "selected" : "")" @onclick="() => SelectSlot(slot)">
+                    <span>
+                        <strong>@slot.StartsAt.ToString("ddd d MMM, HH:mm")</strong>
+                        <small>@slot.EndsAt.ToString("HH:mm") - Bay @slot.BayNumber</small>
+                    </span>
+                    <span>
+                        @slot.ServiceType!.Name
+                        <small>@slot.Branch!.Name - @slot.Mechanic!.Name</small>
+                    </span>
+                </button>
+            }
+        }
+    </div>
+
+    <EditForm Model="form" OnValidSubmit="SubmitBooking" class="booking-form">
+        <DataAnnotationsValidator />
+        <h2>Customer details</h2>
+        @if (selectedSlot is null)
+        {
+            <p class="muted">Select a slot to continue.</p>
+        }
+        else
+        {
+            <p class="selected-summary">@selectedSlot.StartsAt.ToString("f") - @selectedSlot.Branch!.Name - @selectedSlot.ServiceType!.Name</p>
+        }
+        <ValidationSummary />
+        <label>
+            Customer name
+            <InputText @bind-Value="form.CustomerName" />
+        </label>
+        <label>
+            Phone number
+            <InputText @bind-Value="form.CustomerPhone" />
+        </label>
+        <label>
+            Vehicle registration
+            <InputText @bind-Value="form.VehicleRegistration" />
+        </label>
+        <label>
+            Notes / description of issue
+            <InputTextArea @bind-Value="form.CustomerNotes" />
+        </label>
+        <button class="button primary" type="submit" disabled="@(selectedSlot is null)">Confirm booking</button>
+    </EditForm>
+</section>
+
+@code {
+    private List<ServiceType> serviceTypes = [];
+    private List<Branch> branches = [];
+    private List<AppointmentSlot>? slots;
+    private AppointmentSlot? selectedSlot;
+    private int? selectedServiceTypeId;
+    private int? selectedBranchId;
+    private BookingForm form = new();
+    private BookingResult? result;
+
+    protected override async Task OnInitializedAsync()
+    {
+        serviceTypes = await Scheduling.GetServiceTypesAsync();
+        branches = await Scheduling.GetBranchesAsync();
+        await LoadSlots();
+    }
+
+    private async Task LoadSlots()
+    {
+        slots = await Scheduling.GetAvailableSlotsAsync(selectedServiceTypeId, selectedBranchId);
+        if (selectedSlot is not null && slots.All(slot => slot.Id != selectedSlot.Id))
+        {
+            selectedSlot = null;
+        }
+    }
+
+    private void SelectSlot(AppointmentSlot slot)
+    {
+        selectedSlot = slot;
+        result = null;
+    }
+
+    private async Task SubmitBooking()
+    {
+        if (selectedSlot is null)
+        {
+            return;
+        }
+
+        result = await Scheduling.BookAsync(new BookingRequest(
+            selectedSlot.Id,
+            form.CustomerName,
+            form.CustomerPhone,
+            form.VehicleRegistration,
+            form.CustomerNotes));
+
+        if (result.Success)
+        {
+            form = new();
+            selectedSlot = null;
+            await LoadSlots();
+        }
+    }
+
+    private sealed class BookingForm
+    {
+        [Required, StringLength(120)] public string CustomerName { get; set; } = "";
+        [Required, Phone, StringLength(40)] public string CustomerPhone { get; set; } = "";
+        [Required, StringLength(20)] public string VehicleRegistration { get; set; } = "";
+        [StringLength(1000)] public string? CustomerNotes { get; set; }
+    }
+}
