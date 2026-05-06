@@ -178,6 +178,12 @@ textarea {
     gap: 10px;
 }
 
+.booking-grid .slot-list {
+    max-height: calc(100vh - 210px);
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
 .slot,
 .row-card,
 .panel,
